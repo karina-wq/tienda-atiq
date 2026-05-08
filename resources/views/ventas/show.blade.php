@@ -152,7 +152,7 @@
                     </tfoot>
                 </table>
             </div>
-            <a href="{{ route('reportes.ventas.ticket-pdf', $venta->id) }}"
+            <a href="{{ route('ventas.ticket-pdf', $venta->id) }}"
    class="btn btn-outline-danger btn-sm">
     <i class="bi bi-file-pdf me-1"></i> Descargar PDF
 </a>

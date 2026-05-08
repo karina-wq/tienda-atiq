@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Proveedor;
 use App\Models\Producto;
+use App\Models\Categoria;
 use App\Repositories\CompraRepository;
 use App\Services\CompraService;
 use App\Http\Requests\Compra\StoreCompraRequest;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\ComprasMasivasImport;
 
 class CompraController extends Controller
 {
@@ -27,7 +26,8 @@ class CompraController extends Controller
     {
         $proveedores = Proveedor::activos()->orderBy('razon_social')->get();
         $productos   = Producto::activos()->orderBy('nombre')->get();
-        return view('compras.create', compact('proveedores', 'productos'));
+        $categorias  = Categoria::activas()->orderBy('nombre')->get(); // Para modal nuevo producto
+        return view('compras.create', compact('proveedores', 'productos', 'categorias'));
     }
 
     public function store(StoreCompraRequest $request)
@@ -59,27 +59,6 @@ class CompraController extends Controller
                 ->with('success', 'Compra anulada correctamente.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
-        }
-    }
-    
-    // Nueva función para importar compras masivas
-    public function importForm()
-    {
-        return view('compras.import');
-    }
-    
-    public function import(Request $request)
-    {
-        $request->validate([
-            'archivo' => 'required|mimes:xlsx,xls,csv'
-        ]);
-        
-        try {
-            Excel::import(new ComprasMasivasImport, $request->file('archivo'));
-            return redirect()->route('compras.index')
-                ->with('success', 'Compras importadas correctamente');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Error al importar: ' . $e->getMessage());
         }
     }
 }

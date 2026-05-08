@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Proveedor;
 use App\Http\Requests\Proveedor\StoreProveedorRequest;
+use Illuminate\Http\Request;
 
 class ProveedorController extends Controller
 {
@@ -46,5 +47,28 @@ class ProveedorController extends Controller
         $proveedor->delete();
         return redirect()->route('proveedores.index')
             ->with('success', 'Proveedor eliminado.');
+    }
+
+    /**
+     * Crea un proveedor vía AJAX desde el modal de compras.
+     */
+    public function storeAjax(Request $request)
+    {
+        $validated = $request->validate([
+            'razon_social' => 'required|string|max:200',
+            'ruc'          => 'nullable|string|max:20|unique:proveedores,ruc',
+            'contacto'     => 'nullable|string|max:100',
+            'telefono'     => 'nullable|string|max:20',
+            'email'        => 'nullable|email|max:100',
+            'direccion'    => 'nullable|string|max:255',
+        ]);
+
+        $proveedor = Proveedor::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'id'      => $proveedor->id,
+            'nombre'  => $proveedor->razon_social,
+        ]);
     }
 }

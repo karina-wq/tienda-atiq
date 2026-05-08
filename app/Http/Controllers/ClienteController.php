@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Cliente;
 use App\Http\Requests\Cliente\StoreClienteRequest;
+use Illuminate\Http\Request;
 
 class ClienteController extends Controller
 {
@@ -46,5 +47,30 @@ class ClienteController extends Controller
         $cliente->delete();
         return redirect()->route('clientes.index')
             ->with('success', 'Cliente eliminado.');
+    }
+
+    /**
+     * Crea un cliente vía AJAX desde el modal del POS.
+     */
+    public function storeAjax(Request $request)
+    {
+        $validated = $request->validate([
+            'nombre'           => 'required|string|max:200',
+            'tipo_documento'   => 'nullable|string|in:DNI,RUC,CE',
+            'numero_documento' => 'nullable|string|max:20|unique:clientes,numero_documento',
+            'telefono'         => 'nullable|string|max:20',
+            'email'            => 'nullable|email|max:100',
+            'direccion'        => 'nullable|string|max:255',
+        ]);
+
+        $validated['tipo_documento'] = $validated['tipo_documento'] ?? 'DNI';
+
+        $cliente = Cliente::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'id'      => $cliente->id,
+            'nombre'  => $cliente->nombre,
+        ]);
     }
 }

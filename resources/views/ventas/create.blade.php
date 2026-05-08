@@ -103,21 +103,33 @@
     <div class="col-lg-5">
         <div id="panel-carrito">
 
-            {{-- Cabecera venta --}}
+            {{-- Cabecera venta: Cliente + Comprobante --}}
             <div class="card shadow-sm mb-2">
                 <div class="card-body py-2">
                     <div class="row g-2">
+
+                        {{-- SELECTOR CLIENTE con botón "Nuevo" --}}
                         <div class="col-7">
                             <label class="form-label mb-1 small">Cliente</label>
-                            <select name="cliente_id" class="form-select form-select-sm">
-                                @foreach($clientes as $cli)
-                                    <option value="{{ $cli->id }}"
-                                        {{ $cli->numero_documento === '00000000' ? 'selected' : '' }}>
-                                        {{ $cli->nombre }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <div class="input-group input-group-sm">
+                                <select name="cliente_id" id="selectCliente" class="form-select form-select-sm">
+                                    @foreach($clientes as $cli)
+                                        <option value="{{ $cli->id }}"
+                                            {{ $cli->numero_documento === '00000000' ? 'selected' : '' }}>
+                                            {{ $cli->nombre }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-sm"
+                                        title="Nuevo cliente"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalCliente">
+                                    <i class="bi bi-person-plus"></i>
+                                </button>
+                            </div>
                         </div>
+
                         <div class="col-5">
                             <label class="form-label mb-1 small">Comprobante</label>
                             <select name="tipo_comprobante" class="form-select form-select-sm">
@@ -184,7 +196,7 @@
                     <div class="mb-2">
                         <label class="form-label small mb-1">Método de Pago</label>
                         <div class="d-flex gap-1 flex-wrap">
-                            @foreach(['EFECTIVO','TARJETA','YAPE','PLIN'] as $mp)
+                            @foreach(['EFECTIVO','QR_INTERBANK','YAPE','PLIN'] as $mp)
                             <div class="form-check form-check-inline m-0">
                                 <input class="form-check-input" type="radio"
                                        name="metodo_pago" id="mp_{{ $mp }}"
@@ -244,19 +256,80 @@
 </div>
 </form>
 
+{{-- ============================================================ --}}
+{{-- MODAL: NUEVO CLIENTE                                          --}}
+{{-- ============================================================ --}}
+<div class="modal fade" id="modalCliente" tabindex="-1" aria-labelledby="modalClienteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalClienteLabel">
+                    <i class="bi bi-person-plus me-2 text-primary"></i>Nuevo Cliente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="alertaCliente"></div>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Nombre completo <span class="text-danger">*</span></label>
+                        <input type="text" id="cli_nombre" class="form-control"
+                               placeholder="Nombre del cliente">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tipo Documento</label>
+                        <select id="cli_tipo_documento" class="form-select">
+                            <option value="DNI">DNI</option>
+                            <option value="RUC">RUC</option>
+                            <option value="CE">CE</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Número de Documento</label>
+                        <input type="text" id="cli_numero_documento" class="form-control"
+                               placeholder="00000000" maxlength="20">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Teléfono</label>
+                        <input type="text" id="cli_telefono" class="form-control"
+                               placeholder="999 999 999">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="cli_email" class="form-control"
+                               placeholder="correo@ejemplo.com">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Dirección</label>
+                        <input type="text" id="cli_direccion" class="form-control"
+                               placeholder="Dirección completa">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarCliente()">
+                    <i class="bi bi-save me-1"></i> Guardar Cliente
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
 <script>
 let carrito = {};
 
-// ── AGREGAR AL CARRITO ──────────────────────────────────────────
+/* ============================================================
+   CARRITO
+   ============================================================ */
 function agregarAlCarrito(id, nombre, precio, stock, unidad) {
     if (stock <= 0) {
         mostrarAlerta('Sin stock disponible para: ' + nombre, 'warning');
         return;
     }
-
     if (carrito[id]) {
         if (carrito[id].cantidad >= stock) {
             mostrarAlerta('Stock máximo alcanzado: ' + stock + ' ' + unidad, 'warning');
@@ -266,11 +339,9 @@ function agregarAlCarrito(id, nombre, precio, stock, unidad) {
     } else {
         carrito[id] = { id, nombre, precio, stock, unidad, cantidad: 1 };
     }
-
     renderCarrito();
 }
 
-// ── RENDER CARRITO ──────────────────────────────────────────────
 function renderCarrito() {
     const items    = Object.values(carrito);
     const contenedor = document.getElementById('carrito-items');
@@ -300,7 +371,7 @@ function renderCarrito() {
                 <div class="flex-fill me-2">
                     <div class="fw-medium small lh-sm">${item.nombre}</div>
                     <div class="text-muted" style="font-size:0.75rem">
-                        S/ ${item.precio.toFixed(2)} × ${item.cantidad} = 
+                        S/ ${item.precio.toFixed(2)} × ${item.cantidad} =
                         <strong class="text-dark">S/ ${(item.precio * item.cantidad).toFixed(2)}</strong>
                     </div>
                 </div>
@@ -328,14 +399,10 @@ function renderCarrito() {
     recalcularTotales();
 }
 
-// ── CAMBIAR CANTIDAD ────────────────────────────────────────────
 function cambiarCantidad(id, delta) {
     if (!carrito[id]) return;
     const nueva = carrito[id].cantidad + delta;
-    if (nueva <= 0) {
-        eliminarItem(id);
-        return;
-    }
+    if (nueva <= 0) { eliminarItem(id); return; }
     if (nueva > carrito[id].stock) {
         mostrarAlerta('Stock máximo: ' + carrito[id].stock, 'warning');
         return;
@@ -344,22 +411,17 @@ function cambiarCantidad(id, delta) {
     renderCarrito();
 }
 
-function eliminarItem(id) {
-    delete carrito[id];
-    renderCarrito();
-}
+function eliminarItem(id)  { delete carrito[id]; renderCarrito(); }
+function limpiarCarrito()  { carrito = {}; renderCarrito(); }
 
-function limpiarCarrito() {
-    carrito = {};
-    renderCarrito();
-}
-
-// ── TOTALES ─────────────────────────────────────────────────────
+/* ============================================================
+   TOTALES
+   ============================================================ */
 function recalcularTotales() {
-    const items    = Object.values(carrito);
-    const subtotal = items.reduce((s, i) => s + i.precio * i.cantidad, 0);
+    const items     = Object.values(carrito);
+    const subtotal  = items.reduce((s, i) => s + i.precio * i.cantidad, 0);
     const descuento = parseFloat(document.getElementById('inputDescuento').value) || 0;
-    const total    = Math.max(0, subtotal - descuento);
+    const total     = Math.max(0, subtotal - descuento);
 
     document.getElementById('txt-subtotal').textContent  = 'S/ ' + subtotal.toFixed(2);
     document.getElementById('txt-descuento').textContent = '- S/ ' + descuento.toFixed(2);
@@ -370,20 +432,18 @@ function recalcularTotales() {
 }
 
 function calcularVuelto() {
-    const total     = totalActual();
-    const recibido  = parseFloat(document.getElementById('inputMontoPagado')?.value) || 0;
-    const vuelto    = Math.max(0, recibido - total);
-    const elVuelto  = document.getElementById('inputVuelto');
+    const total    = totalActual();
+    const recibido = parseFloat(document.getElementById('inputMontoPagado')?.value) || 0;
+    const vuelto   = Math.max(0, recibido - total);
+    const elVuelto = document.getElementById('inputVuelto');
     if (elVuelto) elVuelto.value = vuelto.toFixed(2);
-
-    // Actualizar hidden para otros métodos
     const hidden = document.getElementById('montoPagadoHidden');
     if (hidden) hidden.value = total.toFixed(2);
 }
 
 function totalActual() {
-    const items    = Object.values(carrito);
-    const subtotal = items.reduce((s, i) => s + i.precio * i.cantidad, 0);
+    const items     = Object.values(carrito);
+    const subtotal  = items.reduce((s, i) => s + i.precio * i.cantidad, 0);
     const descuento = parseFloat(document.getElementById('inputDescuento').value) || 0;
     return Math.max(0, subtotal - descuento);
 }
@@ -402,14 +462,15 @@ function toggleEfectivo() {
     }
 }
 
-// ── FILTROS ─────────────────────────────────────────────────────
+/* ============================================================
+   FILTROS
+   ============================================================ */
 document.getElementById('buscarProducto').addEventListener('input', filtrar);
 document.getElementById('filtroCat').addEventListener('change', filtrar);
 
 function filtrar() {
     const texto = document.getElementById('buscarProducto').value.toLowerCase();
     const cat   = document.getElementById('filtroCat').value;
-
     document.querySelectorAll('.producto-item').forEach(el => {
         const matchTexto = !texto ||
             el.dataset.nombre.includes(texto) ||
@@ -419,7 +480,9 @@ function filtrar() {
     });
 }
 
-// ── VALIDAR SUBMIT ──────────────────────────────────────────────
+/* ============================================================
+   SUBMIT
+   ============================================================ */
 document.getElementById('formVenta').addEventListener('submit', function (e) {
     if (Object.keys(carrito).length === 0) {
         e.preventDefault();
@@ -437,23 +500,80 @@ document.getElementById('formVenta').addEventListener('submit', function (e) {
         mostrarAlerta('El monto recibido es menor al total.', 'danger');
         return;
     }
-
-    // Actualizar monto_pagado para EFECTIVO
     if (metodo === 'EFECTIVO') {
         document.getElementById('inputMontoPagado').name = 'monto_pagado';
     }
 });
 
-// ── ALERTA TOAST ────────────────────────────────────────────────
+/* ============================================================
+   ALERTA TOAST
+   ============================================================ */
 function mostrarAlerta(msg, tipo = 'info') {
     const el = document.createElement('div');
-    el.className = `alert alert-${tipo} alert-dismissible position-fixed
-                    bottom-0 end-0 m-3 shadow`;
+    el.className = `alert alert-${tipo} alert-dismissible position-fixed bottom-0 end-0 m-3 shadow`;
     el.style.zIndex = 9999;
     el.innerHTML = `${msg}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 3000);
+}
+
+/* ============================================================
+   MODAL: NUEVO CLIENTE
+   ============================================================ */
+function guardarCliente() {
+    const nombre = document.getElementById('cli_nombre').value.trim();
+    const alerta = document.getElementById('alertaCliente');
+
+    if (!nombre) {
+        alerta.innerHTML = `<div class="alert alert-danger py-2">El nombre es obligatorio.</div>`;
+        return;
+    }
+    alerta.innerHTML = '';
+
+    fetch('{{ route("clientes.store-ajax") }}', {
+        method:  'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        },
+        body: JSON.stringify({
+            nombre:            nombre,
+            tipo_documento:    document.getElementById('cli_tipo_documento').value,
+            numero_documento:  document.getElementById('cli_numero_documento').value.trim() || null,
+            telefono:          document.getElementById('cli_telefono').value.trim()         || null,
+            email:             document.getElementById('cli_email').value.trim()            || null,
+            direccion:         document.getElementById('cli_direccion').value.trim()        || null,
+        }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // Agregar al select y seleccionarlo automáticamente
+            const select = document.getElementById('selectCliente');
+            const option = new Option(data.nombre, data.id, true, true);
+            select.appendChild(option);
+            select.value = data.id;
+
+            limpiarModalCliente();
+            bootstrap.Modal.getInstance(document.getElementById('modalCliente')).hide();
+        } else {
+            const errores = data.errors
+                ? Object.values(data.errors).flat().join('<br>')
+                : 'Error al guardar.';
+            alerta.innerHTML = `<div class="alert alert-danger py-2">${errores}</div>`;
+        }
+    })
+    .catch(() => {
+        alerta.innerHTML = `<div class="alert alert-danger py-2">Error de conexión.</div>`;
+    });
+}
+
+function limpiarModalCliente() {
+    ['cli_nombre','cli_numero_documento','cli_telefono','cli_email','cli_direccion']
+        .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('cli_tipo_documento').value = 'DNI';
+    document.getElementById('alertaCliente').innerHTML  = '';
 }
 </script>
 @endpush
